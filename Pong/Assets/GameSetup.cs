@@ -13,13 +13,8 @@ public class GameSetup : MonoBehaviour {
 	public Transform player1;
 	public Transform player2;
 
-	// Use this for initialization
-	//void Start () {
-	//
-	//}
-	
 	// Update is called once per frame
-	void Update () {
+	void FixedUpdate () {
 		//Move each wall to its edge location
 		topWall.size = new Vector2 (mainCam.ScreenToWorldPoint (new Vector3 (2f * Screen.width, 0, 0)).x, 1f);
 		topWall.center = new Vector2 (0, mainCam.ScreenToWorldPoint (new Vector3 (0, Screen.height, 0)).y + 0.5f);
