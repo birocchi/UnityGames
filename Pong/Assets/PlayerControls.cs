@@ -9,7 +9,7 @@ public class PlayerControls : MonoBehaviour {
 	public float speed = 10;
 
 	// Update is called once per frame
-	void Update () {
+	void FixedUpdate () {
 		if (Input.GetKey (moveUp)) {
 			rigidbody2D.velocity = new Vector3(0,speed,0);
 		}
