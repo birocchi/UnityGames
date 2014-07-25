@@ -1,16 +1,11 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-[System.Serializable]
-public class Boundary{
-	public float xMin, xMax, zMin, zMax;
-}
-
 public class PlayerController : MonoBehaviour {
 
 	public float speed;
 	public float tilt;
-	public Boundary boundary;
+	private float xMin, xMax, zMin, zMax;
 
 	public GameObject shot;
 	public Transform shotSpawn;
@@ -18,6 +13,18 @@ public class PlayerController : MonoBehaviour {
 	private float nextFire;
 
 	public Vector3 touchOffset;
+	public float upperLimit;
+
+	void Start(){
+		Vector3 playerExtents = GetComponent<MeshCollider>().bounds.extents;
+		float playerWidth = playerExtents.x;
+		float playerHeight = playerExtents.z;
+
+		xMin = Camera.main.ScreenToWorldPoint(Vector3.zero).x + playerWidth;
+		xMax = Camera.main.ScreenToWorldPoint(new Vector3(Screen.width,0,0)).x - playerWidth;
+		zMin = Camera.main.ScreenToWorldPoint(Vector3.zero).z + playerHeight;
+		zMax = Camera.main.ScreenToWorldPoint(new Vector3(0, Screen.height, 0)).z - playerHeight - upperLimit;
+	}
 
 	void Update(){
 		if(Input.GetButton("Fire1")){
@@ -53,9 +60,9 @@ public class PlayerController : MonoBehaviour {
 
 		rigidbody.position = new Vector3
 		(
-			Mathf.Clamp(rigidbody.position.x,boundary.xMin,boundary.xMax),
+			Mathf.Clamp(rigidbody.position.x,xMin,xMax),
 			0,
-			Mathf.Clamp(rigidbody.position.z,boundary.zMin,boundary.zMax)
+			Mathf.Clamp(rigidbody.position.z,zMin,zMax)
 		);
 
 		rigidbody.rotation = Quaternion.Euler(0, 0, rigidbody.velocity.x * -tilt);

@@ -15,7 +15,7 @@ GameObject:
   - 114: {fileID: 11400004}
   m_Layer: 0
   m_Name: Asteroid2
-  m_TagString: Untagged
+  m_TagString: Enemy
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -33,7 +33,7 @@ GameObject:
   - 136: {fileID: 13600000}
   m_Layer: 0
   m_Name: prop_asteroid_02
-  m_TagString: Untagged
+  m_TagString: Enemy
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
