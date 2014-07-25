@@ -17,6 +17,8 @@ public class PlayerController : MonoBehaviour {
 	public float fireRate;
 	private float nextFire;
 
+	public Vector3 touchOffset;
+
 	void Update(){
 		if(Input.GetButton("Fire1")){
 			Shoot();
@@ -28,7 +30,7 @@ public class PlayerController : MonoBehaviour {
 		//Touches
 		if(Input.touchCount > 0){
 			foreach(Touch touch in Input.touches){
-				Vector3 worldPoint = Camera.main.ScreenToWorldPoint(touch.position);
+				Vector3 worldPoint = Camera.main.ScreenToWorldPoint(touch.position) + touchOffset;
 				Vector3 touchToPlayer = worldPoint - transform.position;
 				rigidbody.velocity = new Vector3(Mathf.Clamp (touchToPlayer.x,-1,1),0,Mathf.Clamp (touchToPlayer.z,-1,1)) * speed;
 				Shoot ();
@@ -36,7 +38,7 @@ public class PlayerController : MonoBehaviour {
 		}
 		//Mouse
 		else if(Input.GetMouseButton(0)){
-			Vector3 worldPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+			Vector3 worldPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition) + touchOffset;
 			Vector3 touchToPlayer = worldPoint - transform.position;
 			rigidbody.velocity = new Vector3(Mathf.Clamp (touchToPlayer.x,-1,1),0,Mathf.Clamp (touchToPlayer.z,-1,1)) * speed;
 			Shoot ();
