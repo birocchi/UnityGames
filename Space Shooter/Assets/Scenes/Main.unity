@@ -1600,15 +1600,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   speed: 10
   tilt: 4
-  boundary:
-    xMin: -6
-    xMax: 6
-    zMin: -4
-    zMax: 8
   shot: {fileID: 100002, guid: 6cdcb4f8465583645a3e76c81d23673e, type: 2}
   shotSpawn: {fileID: 1679062350}
   fireRate: .25
   touchOffset: {x: 0, y: 0, z: 2}
+  upperLimit: 5
 --- !u!82 &469725094
 AudioSource:
   m_ObjectHideFlags: 0
