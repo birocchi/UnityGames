@@ -14,7 +14,7 @@ public class ShotController : MonoBehaviour {
 
 	void OnEnable(){
 		rigidbody2D.velocity = transform.up * speed;
-		//StartCoroutine(DestroyObject(lifeTime));
+		StartCoroutine(DestroyObject(lifeTime));
 	}
 
 	void OnCollisionEnter2D(Collision2D other){
