@@ -41,7 +41,7 @@ public class PlayerController : MonoBehaviour {
 		propulsor = playerShip.FindChild("Propulsor");
 		shotSpawn = playerShip.FindChild("ShotSpawn");
 		health = GetComponent<HealthController>();
-		shotsPool = GameObject.Find("ShotsPoolManager").GetComponent<ShotsPoolManager>();;
+		shotsPool = GameObject.Find("ShotsPoolManager").GetComponent<ShotsPoolManager>();
 	}
 
 	void Update(){
@@ -52,7 +52,7 @@ public class PlayerController : MonoBehaviour {
 					nextFire = Time.time + fireRate;
 					networkView.group = 2;
 					Debug.Log(string.Format("Calling RPC -InstantiateShot- using Group: {0}, Owner: {1} ", networkView.group, networkView.owner));
-					networkView.RPC ("InstantiateShot", RPCMode.AllBuffered);
+					networkView.RPC ("InstantiateShot", RPCMode.AllBuffered, networkView.viewID.ToString());
 					networkView.group = 0;
 				}
 			}
@@ -142,11 +142,12 @@ public class PlayerController : MonoBehaviour {
 
 	void OnCollisionEnter2D(Collision2D other){
 		if(other.gameObject.tag.Equals("Shot")){
-			Debug.Log(string.Format("My Ship? {0}, My Shot? {1}, Ship Owner: {2}, Shot Owner: {3}",gameObject.networkView.isMine,other.gameObject.networkView.isMine, gameObject.networkView.owner, other.gameObject.networkView.owner));
+			string shipOwnerID = gameObject.networkView.viewID.ToString();
+			string shotOwnerID = other.gameObject.name.Substring(ShotController.DefaultName.Length);
 
-			if((gameObject.networkView.isMine && !other.gameObject.networkView.isMine) ||
-			   (!gameObject.networkView.isMine && other.gameObject.networkView.isMine) ||
-			   (!gameObject.networkView.isMine && !other.gameObject.networkView.isMine && gameObject.networkView.owner != other.gameObject.networkView.owner)){
+			Debug.Log(string.Format("Shot Collision! Ship Owner ID: {0}, Shot Owner ID: {1}",shipOwnerID,shotOwnerID));
+
+			if(shipOwnerID != shotOwnerID){
 				Debug.Log(string.Format("Damage applied to {0}!",gameObject.name));
 
 				if(Network.isServer){
@@ -195,12 +196,13 @@ public class PlayerController : MonoBehaviour {
 	}
 
 	[RPC]
-	void InstantiateShot(){
+	void InstantiateShot(string playerID){
 		GameObject shot = shotsPool.GetFreeObject();
 		if(shot != null){
 			Debug.Log("Enabled the shot with viewID = " + shot.networkView.viewID);
 			shot.transform.position = shotSpawn.position;
 			shot.transform.rotation = shotSpawn.rotation;
+			shot.name = ShotController.DefaultName + playerID;
 			shot.SetActive(true);
 		}
 	}

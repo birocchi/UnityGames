@@ -6,6 +6,12 @@ public class ShotController : MonoBehaviour {
 	public float speed;
 	public float lifeTime;
 
+	public static string DefaultName{ get; set; }
+
+	void Awake(){
+		DefaultName = gameObject.name;
+	}
+
 	void OnEnable(){
 		rigidbody2D.velocity = transform.up * speed;
 		//StartCoroutine(DestroyObject(lifeTime));
@@ -31,6 +37,7 @@ public class ShotController : MonoBehaviour {
 		GameObject shot = NetworkView.Find(shotViewID).gameObject;
 		if(shot != null){
 			shot.SetActive(false);
+			shot.name = DefaultName;
 			Debug.Log(string.Format("Disabled the shot with viewID = {0}", shotViewID));
 		}
 	}
