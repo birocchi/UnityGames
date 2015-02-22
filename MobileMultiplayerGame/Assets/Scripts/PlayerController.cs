@@ -52,7 +52,7 @@ public class PlayerController : MonoBehaviour {
 					nextFire = Time.time + fireRate;
 					networkView.group = 2;
 					Debug.Log(string.Format("Calling RPC -InstantiateShot- using Group: {0}, Owner: {1} ", networkView.group, networkView.owner));
-					networkView.RPC ("InstantiateShot", RPCMode.AllBuffered, networkView.viewID.ToString());
+					networkView.RPC ("InstantiateShot", RPCMode.AllBuffered, networkView.viewID.ToString(), shotsPool.GetFreeObject().networkView.viewID);
 					networkView.group = 0;
 				}
 			}
@@ -196,8 +196,8 @@ public class PlayerController : MonoBehaviour {
 	}
 
 	[RPC]
-	void InstantiateShot(string playerID){
-		GameObject shot = shotsPool.GetFreeObject();
+	void InstantiateShot(string playerID, NetworkViewID shotViewID){
+		GameObject shot = shotsPool.GetObjectByID(shotViewID);
 		if(shot != null){
 			Debug.Log("Enabled the shot with viewID = " + shot.networkView.viewID);
 			shot.transform.position = shotSpawn.position;

@@ -17,13 +17,20 @@ public class GameObjectPool {
 	}
 
 	public GameObject GetFreeObject(){
-		foreach(GameObject go in pool){
-			if(!go.activeSelf){
-				return go;
+		foreach(GameObject obj in pool){
+			if(!obj.activeSelf){
+				return obj;
 			}
 		}
 		return null;
 	}
 
-
+	public GameObject GetObjectByID(NetworkViewID ID){
+		foreach(GameObject obj in pool){
+			if(obj.networkView.viewID == ID){
+				return obj;
+			}
+		}
+		return null;
+	}
 }

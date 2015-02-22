@@ -26,6 +26,10 @@ public class ShotsPoolManager : MonoBehaviour {
 		return shotsPool.GetFreeObject();
 	}
 
+	public GameObject GetObjectByID(NetworkViewID ID){
+		return shotsPool.GetObjectByID(ID);
+	}
+
 	[RPC]
 	public void AddShotToPool(NetworkViewID shotViewID){
 		GameObject shot = NetworkView.Find(shotViewID).gameObject;
