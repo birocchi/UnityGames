@@ -9,13 +9,12 @@ public class PlayerController : MonoBehaviour {
 	public float turningSpeed;
 	private Transform playerShip;
 	private Transform propulsor;
-	private bool isPropulsorOn;
 	
 	//Shooting
-	public GameObject shotObject;
 	public float fireRate;
 	private Transform shotSpawn;
 	private float nextFire;
+	private ShotsPoolManager shotsPool;
 
 	//Movement synchronization
 	private float lastSynchronizationTime;
@@ -42,6 +41,7 @@ public class PlayerController : MonoBehaviour {
 		propulsor = playerShip.FindChild("Propulsor");
 		shotSpawn = playerShip.FindChild("ShotSpawn");
 		health = GetComponent<HealthController>();
+		shotsPool = GameObject.Find("ShotsPoolManager").GetComponent<ShotsPoolManager>();;
 	}
 
 	void Update(){
@@ -50,7 +50,10 @@ public class PlayerController : MonoBehaviour {
 			if(Input.GetButton("Fire1")){
 				if(Time.time > nextFire){
 					nextFire = Time.time + fireRate;
-					Network.Instantiate(shotObject, shotSpawn.position, shotSpawn.rotation, 0 );
+					networkView.group = 2;
+					Debug.Log(string.Format("Calling RPC -InstantiateShot- using Group: {0}, Owner: {1} ", networkView.group, networkView.owner));
+					networkView.RPC ("InstantiateShot", RPCMode.AllBuffered);
+					networkView.group = 0;
 				}
 			}
 		}
@@ -101,8 +104,6 @@ public class PlayerController : MonoBehaviour {
 			}
 			#endif
 
-			//isPropulsorOn = verticalMove > 0 ? true: false;
-			//if( isPropulsorOn )
 			if(verticalMove > 0)
 				propulsor.particleSystem.Play();
 			else{
@@ -141,7 +142,7 @@ public class PlayerController : MonoBehaviour {
 
 	void OnCollisionEnter2D(Collision2D other){
 		if(other.gameObject.tag.Equals("Shot")){
-			Debug.Log(string.Format("My Ship: {0}, My Shot: {1}",gameObject.networkView.isMine,other.gameObject.networkView.isMine));
+			Debug.Log(string.Format("My Ship? {0}, My Shot? {1}, Ship Owner: {2}, Shot Owner: {3}",gameObject.networkView.isMine,other.gameObject.networkView.isMine, gameObject.networkView.owner, other.gameObject.networkView.owner));
 
 			if((gameObject.networkView.isMine && !other.gameObject.networkView.isMine) ||
 			   (!gameObject.networkView.isMine && other.gameObject.networkView.isMine) ||
@@ -149,7 +150,14 @@ public class PlayerController : MonoBehaviour {
 				Debug.Log(string.Format("Damage applied to {0}!",gameObject.name));
 
 				if(Network.isServer){
+					Debug.Log(string.Format("Calling RPC -ChangeHealth- using {0}, Group: {1}, Owner: {2} ", networkView.viewID, networkView.group, networkView.owner));
+					Debug.Log(string.Format("Calling RPC -ChangeHealth- through {0}, Group: {1}, Owner: {2} ", health.networkView.viewID, health.networkView.group, health.networkView.owner));
 					health.networkView.RPC("ChangeHealth",RPCMode.AllBuffered,-10);
+					if(health.isDead){
+						Debug.Log("Removing all RPCs called by " + networkView.viewID + " in group " + networkView.group);
+						Network.RemoveRPCs(networkView.viewID);
+						Network.Destroy(this.gameObject);
+					}
 				}
 			}
 		}
@@ -183,6 +191,17 @@ public class PlayerController : MonoBehaviour {
 			//Set the initial rotation and the destination
 			syncStartRotation = playerShip.rotation;
 			syncEndRotation = syncRotation;
+		}
+	}
+
+	[RPC]
+	void InstantiateShot(){
+		GameObject shot = shotsPool.GetFreeObject();
+		if(shot != null){
+			Debug.Log("Enabled the shot with viewID = " + shot.networkView.viewID);
+			shot.transform.position = shotSpawn.position;
+			shot.transform.rotation = shotSpawn.rotation;
+			shot.SetActive(true);
 		}
 	}
 

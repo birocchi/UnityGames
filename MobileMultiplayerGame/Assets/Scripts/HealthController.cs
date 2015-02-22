@@ -34,17 +34,8 @@ public class HealthController : MonoBehaviour {
 		currentHealthPercent = (currentHealth * 100)/maxHealth;
 
 		healthIndicator.localScale = new Vector3(currentHealthPercent/100f, 1, 1);
-
-		if(isDead){
-			DestroyPlayer();
-		}
 	}
 
-	void DestroyPlayer(){
-		if(Network.isServer){
-			Network.RemoveRPCs(networkView.owner);
-			Network.Destroy(this.gameObject);
-		}
-	}
+
 
 }
