@@ -30,10 +30,13 @@ public class PlayerController : MonoBehaviour {
 	private Vector2 initialTouchPosition;
 	private float touchDistanceTolerance = 10f;
 	#endif
-
-	//Player Health
-	private HealthController health;
 	
+	//Player info
+	private HealthController health;
+	public string playerName;
+	public int playerNumber;
+	public NetworkPlayer netPlayer;
+	private ScoreManager score;
 
 	void Awake () {
 		lastSynchronizationTime = Time.time;
@@ -42,6 +45,25 @@ public class PlayerController : MonoBehaviour {
 		shotSpawn = playerShip.FindChild("ShotSpawn");
 		health = GetComponent<HealthController>();
 		shotsPool = GameObject.Find("ShotsPoolManager").GetComponent<ShotsPoolManager>();
+		score = GameObject.Find("GameManager").GetComponent<ScoreManager>();
+	}
+
+	void Start(){
+		if(networkView.isMine){
+			if(Network.isServer){
+				playerNumber = score.IncludeServerPlayer(playerName, networkView.owner);
+				score.networkView.RPC("IncludePlayer", RPCMode.AllBuffered, playerName, networkView.owner, playerNumber);
+			}
+			else {
+				score.networkView.RPC("IncludeNewPlayerOnServer",RPCMode.Server, playerName, networkView.viewID);
+			}
+		}
+	}
+
+	[RPC]
+	public void OnReceivePlayerNumberFromServer(int serverPlayerNumber){
+		playerNumber = serverPlayerNumber;
+		score.networkView.RPC("IncludePlayer", RPCMode.AllBuffered, playerName, networkView.owner, playerNumber);
 	}
 
 	void Update(){

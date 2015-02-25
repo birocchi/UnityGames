@@ -24,6 +24,18 @@ public class NetworkLevelLoader : MonoBehaviour {
 		networkView.group = 1;
 	}
 
+	void Update(){
+		if(Input.GetKey(KeyCode.Escape)){
+			if(Application.loadedLevelName == "MainLobby"){
+				Application.Quit();
+			}
+			else {
+				Application.LoadLevel(disconnectedLevel);
+			}
+
+		}
+	}
+
 	void OnServerInitialized(){
 		Network.RemoveRPCsInGroup(0);
 		Network.RemoveRPCsInGroup(1);

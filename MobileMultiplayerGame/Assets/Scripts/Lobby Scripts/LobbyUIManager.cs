@@ -9,18 +9,27 @@ public class LobbyUIManager : MonoBehaviour {
 	private GameObject hostListPanel;
 	private GameObject controlsPanel;
 	private InputField gameNameInputField;
+	private InputField playerNameInputField;
 
 	void Awake(){
 		hostListPanel = GameObject.Find("HostListPanel");
 		controlsPanel = GameObject.Find("ControlsPanel");
-		gameNameInputField = GameObject.Find("InputField").GetComponent<InputField>();
+		gameNameInputField = GameObject.Find("GameNameInput").GetComponent<InputField>();
+		playerNameInputField = GameObject.Find("PlayerNameInput").GetComponent<InputField>();
 	}
 
 	public string GetGameName(){
-		if(gameNameInputField != null) 
+		if(gameNameInputField != null && gameNameInputField.text != string.Empty) 
 			return gameNameInputField.text;
 		else
-			return "No Game Name";
+			return "NoGameName";
+	}
+
+	public string GetPlayerName(){
+		if(playerNameInputField != null && playerNameInputField.text != string.Empty) 
+			return playerNameInputField.text;
+		else
+			return "NoPlayerName";
 	}
 
 	//Shows the list of available hosts

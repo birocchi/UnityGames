@@ -15,6 +15,8 @@ public class NetworkManager : MonoBehaviour {
 
 	private HostData[] hostData;
 	private LobbyUIManager uiManager;
+	private ScoreManager score;
+	private string playerName;	
 #endregion
 
 #region Public Methods
@@ -36,9 +38,10 @@ public class NetworkManager : MonoBehaviour {
 	//Join a game using the host data
 	public void ConnectToHost(HostData host){
 		if(host != null){
+			playerName = uiManager.GetPlayerName();
 			Network.Connect(host);
 		}
-	}
+	}	
 #endregion
 
 #region Private Methods
@@ -52,35 +55,38 @@ public class NetworkManager : MonoBehaviour {
 		DontDestroyOnLoad(this);
 	}
 
+	void Start(){
+		uiManager = GameObject.Find("UIManager").GetComponent<LobbyUIManager>();
+	}
+
 	//Spawns the network player
-	private void SpawnPlayer(){
-		Debug.Log("Spawning Player...");
+	private IEnumerator SpawnPlayer(){
+		yield return new WaitForEndOfFrame();
+		Debug.Log("Instantiating the player...");
 		GameObject instance = (GameObject) Network.Instantiate(playerPrefabs[Random.Range(0,playerPrefabs.Length)], Vector3.zero, Quaternion.identity, 0);
+		instance.GetComponent<PlayerController>().playerName = playerName;
 		Camera.main.GetComponent<CameraFollow>().followedObject = instance.transform;
 	}
 #endregion
 
 #region Network Callbacks
-	//Called when connected to a server
-	void OnConnectedToServer() {
-		Debug.Log("Connected to the server!");
-	}
-
 	//Called when a server is initialized
 	void OnServerInitialized(){
 		Debug.Log("Server initialized, now registering...");
-		uiManager = GameObject.Find("UIManager").GetComponent<LobbyUIManager>();
+		playerName = uiManager.GetPlayerName();
 		MasterServer.RegisterHost(gameTypeName, uiManager.GetGameName(), "Network Game Room");
 	}
 
 	void OnPlayerDisconnected(NetworkPlayer netPlayer){
 		Debug.Log("Player disconnected from: " + netPlayer.ipAddress + ":" + netPlayer.port);
+		score.networkView.RPC("ExcludePlayer",RPCMode.All, netPlayer);
 		Network.RemoveRPCs(netPlayer);
 		Network.DestroyPlayerObjects(netPlayer);
 	}
 
 	void OnNetworkLoadedLevel(){
-		SpawnPlayer();
+		score = GameObject.Find("GameManager").GetComponent<ScoreManager>();
+		StartCoroutine(SpawnPlayer());
 	}
 #endregion
 
