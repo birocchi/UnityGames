@@ -56,6 +56,7 @@ public class ScoreManager : MonoBehaviour {
 		}
 	}
 
+	[RPC]
 	public void AddScore(int value, int playerNumber){
 		if(playerNumber >= 1 && playerNumber <= 4){
 			playerScores[playerNumber - 1] += value;

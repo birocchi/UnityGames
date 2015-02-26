@@ -74,7 +74,7 @@ public class PlayerController : MonoBehaviour {
 					nextFire = Time.time + fireRate;
 					networkView.group = 2;
 					Debug.Log(string.Format("Calling RPC -InstantiateShot- using Group: {0}, Owner: {1} ", networkView.group, networkView.owner));
-					networkView.RPC ("InstantiateShot", RPCMode.AllBuffered, networkView.viewID.ToString(), shotsPool.GetFreeObject().networkView.viewID);
+					networkView.RPC ("InstantiateShot", RPCMode.AllBuffered, playerNumber.ToString(), shotsPool.GetFreeObject().networkView.viewID);
 					networkView.group = 0;
 				}
 			}
@@ -179,6 +179,7 @@ public class PlayerController : MonoBehaviour {
 					Debug.Log(string.Format("Calling RPC -ChangeHealth- using {0}, Group: {1}, Owner: {2} ", networkView.viewID, networkView.group, networkView.owner));
 					Debug.Log(string.Format("Calling RPC -ChangeHealth- through {0}, Group: {1}, Owner: {2} ", health.networkView.viewID, health.networkView.group, health.networkView.owner));
 					health.networkView.RPC("ChangeHealth",RPCMode.AllBuffered,-10);
+					score.networkView.RPC ("AddScore",RPCMode.AllBuffered, 1, int.Parse(shotOwnerID));
 					if(health.isDead){
 						Debug.Log("Removing all RPCs called by " + networkView.viewID + " in group " + networkView.group);
 						Network.RemoveRPCs(networkView.viewID);
