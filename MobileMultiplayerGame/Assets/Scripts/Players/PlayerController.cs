@@ -24,6 +24,7 @@ public class PlayerController : MonoBehaviour {
 	private Vector3 syncEndPosition = Vector3.zero;
 	private Quaternion syncStartRotation = Quaternion.identity;
 	private Quaternion syncEndRotation = Quaternion.identity;
+	private float verticalMove = 0f;
 
 	#if UNITY_ANDROID || UNITY_IPHONE
 	//Mobile controller
@@ -75,7 +76,7 @@ public class PlayerController : MonoBehaviour {
 			shot.name = ShotController.DefaultName + playerID;
 			shot.GetComponent<ShotController>().OwnerID = ownerID;
 			shot.SetActive(true);
-			Debug.Log("Enabled the shot with viewID = " + shotID);
+			//Debug.Log("Enabled the shot with viewID = " + shotID);
 		}
 	}
 
@@ -88,7 +89,7 @@ public class PlayerController : MonoBehaviour {
 
 					NetworkViewID shotID = shotsPool.GetFreeObject().GetComponent<NetworkView>().viewID;
 					NetworkView playerShootingView = networkView.GetComponents<NetworkView>()[1];
-					Debug.Log("NetworkView used to call the EnableShot RPC: " + playerShootingView.viewID);
+					//Debug.Log("NetworkView used to call the EnableShot RPC: " + playerShootingView.viewID);
 					playerShootingView.RPC ("EnableShot", RPCMode.AllBuffered, playerNumber.ToString(), shotID, playerShootingView.viewID);
 				}
 			}
@@ -100,13 +101,20 @@ public class PlayerController : MonoBehaviour {
 			transform.position = Vector3.Lerp(syncStartPosition, syncEndPosition, syncTime / syncDelay);
 			playerShip.rotation = Quaternion.Lerp(syncStartRotation, syncEndRotation, syncTime / syncDelay);
 		}
+
+		if(verticalMove > 0)
+			propulsor.particleSystem.Play();
+		else{
+			propulsor.particleSystem.Stop();
+			propulsor.particleSystem.Clear();
+		}
 	}
 
 	void FixedUpdate () {
 		//Do nothing if the player was not created by me
 		if(networkView.isMine){
 
-			float verticalMove = Input.GetAxis("Vertical");
+			verticalMove = Input.GetAxis("Vertical");
 
 			#if UNITY_ANDROID || UNITY_IPHONE
 			if(Input.touchCount > 0){
@@ -143,14 +151,9 @@ public class PlayerController : MonoBehaviour {
 			}
 			#endif
 
-			if(verticalMove > 0)
-				propulsor.particleSystem.Play();
-			else{
-				propulsor.particleSystem.Stop();
-				propulsor.particleSystem.Clear();
+			if(verticalMove > 0){
+				rigidbody2D.AddForce(playerShip.up * verticalMove * acceleration);
 			}
-
-			rigidbody2D.AddForce(playerShip.up * verticalMove * acceleration);
 
 			if(rigidbody2D.velocity.magnitude > maxSpeed){
 				rigidbody2D.velocity = rigidbody2D.velocity.normalized * maxSpeed;
@@ -190,13 +193,13 @@ public class PlayerController : MonoBehaviour {
 				Debug.Log(string.Format("Damage applied to {0}!",gameObject.name));
 
 				if(Network.isServer){
-					Debug.Log(string.Format("Calling RPC -ChangeHealth- using {0}, Group: {1}, Owner: {2} ", networkView.viewID, networkView.group, networkView.owner));
-					Debug.Log(string.Format("Calling RPC -ChangeHealth- through {0}, Group: {1}, Owner: {2} ", health.networkView.viewID, health.networkView.group, health.networkView.owner));
+					//Debug.Log(string.Format("Calling RPC -ChangeHealth- using {0}, Group: {1}, Owner: {2} ", networkView.viewID, networkView.group, networkView.owner));
+					//Debug.Log(string.Format("Calling RPC -ChangeHealth- through {0}, Group: {1}, Owner: {2} ", health.networkView.viewID, health.networkView.group, health.networkView.owner));
 					health.networkView.RPC("ChangeHealth",RPCMode.AllBuffered,-10);
 					score.networkView.RPC ("AddScore",RPCMode.AllBuffered, 1, int.Parse(shotOwnerID));
 					if(health.isDead){
-						Debug.Log("Removing all RPCs called by " + networkView.viewID + " in group " + networkView.group);
-						Network.RemoveRPCs(networkView.viewID);
+						//Debug.Log("Removing all RPCs called by " + networkView.viewID + " in group " + networkView.group);
+						Network.RemoveRPCs(Network.player);
 						Network.Destroy(this.gameObject);
 					}
 				}
@@ -207,18 +210,22 @@ public class PlayerController : MonoBehaviour {
 	void OnSerializeNetworkView(BitStream stream, NetworkMessageInfo info){
 		Vector3 syncPosition = Vector3.zero;
 		Quaternion syncRotation = Quaternion.identity;
+		float syncVerticalMove = 0;
 
 		//If is writing on the stream, sends the position;
 		if(stream.isWriting){
 			syncPosition = transform.position;
 			syncRotation = playerShip.rotation;
+			syncVerticalMove = verticalMove;
 			stream.Serialize(ref syncPosition);
 			stream.Serialize(ref syncRotation);
+			stream.Serialize(ref syncVerticalMove);
 		}
 		//If is reading the stream, set the variables used in interpolating the position
 		else if(stream.isReading){
 			stream.Serialize(ref syncPosition);
 			stream.Serialize(ref syncRotation);
+			stream.Serialize(ref syncVerticalMove);
 
 			//Reset the timer and calculate the delay between the network sent packages
 			syncTime = 0f;
@@ -232,6 +239,8 @@ public class PlayerController : MonoBehaviour {
 			//Set the initial rotation and the destination
 			syncStartRotation = playerShip.rotation;
 			syncEndRotation = syncRotation;
+
+			verticalMove = syncVerticalMove;
 		}
 	}
 }
