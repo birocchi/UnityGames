@@ -77,7 +77,7 @@ public class LobbyUIManager : MonoBehaviour {
 		
 		if (msEvent == MasterServerEvent.HostListReceived){
 			hostData = MasterServer.PollHostList();
-			Debug.Log("Host list received: " + hostData.Length + " Host(s) found.");
+			//Debug.Log("Host list received: " + hostData.Length + " Host(s) found.");
 			
 			if(hostData != null && hostData.Length > 0){
 				FillHostList(hostData);

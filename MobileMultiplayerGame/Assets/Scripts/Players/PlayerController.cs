@@ -25,7 +25,7 @@ public class PlayerController : MonoBehaviour {
 	private Quaternion syncStartRotation = Quaternion.identity;
 	private Quaternion syncEndRotation = Quaternion.identity;
 
-	#if UNITY_ANDROID
+	#if UNITY_ANDROID || UNITY_IPHONE
 	//Mobile controller
 	private Vector2 initialTouchPosition;
 	private float touchDistanceTolerance = 10f;
@@ -66,16 +66,30 @@ public class PlayerController : MonoBehaviour {
 		score.networkView.RPC("IncludePlayer", RPCMode.AllBuffered, playerName, networkView.owner, playerNumber);
 	}
 
+	[RPC]
+	void EnableShot(string playerID, NetworkViewID shotID, NetworkViewID ownerID){
+		GameObject shot = shotsPool.GetObjectByID(shotID);
+		if(shot != null){
+			shot.transform.position = shotSpawn.position;
+			shot.transform.rotation = shotSpawn.rotation;
+			shot.name = ShotController.DefaultName + playerID;
+			shot.GetComponent<ShotController>().OwnerID = ownerID;
+			shot.SetActive(true);
+			Debug.Log("Enabled the shot with viewID = " + shotID);
+		}
+	}
+
 	void Update(){
-		#if !UNITY_ANDROID
+		#if !UNITY_ANDROID && !UNITY_IPHONE
 		if(networkView.isMine){
 			if(Input.GetButton("Fire1")){
 				if(Time.time > nextFire){
 					nextFire = Time.time + fireRate;
-					networkView.group = 2;
-					Debug.Log(string.Format("Calling RPC -InstantiateShot- using Group: {0}, Owner: {1} ", networkView.group, networkView.owner));
-					networkView.RPC ("InstantiateShot", RPCMode.AllBuffered, playerNumber.ToString(), shotsPool.GetFreeObject().networkView.viewID);
-					networkView.group = 0;
+
+					NetworkViewID shotID = shotsPool.GetFreeObject().GetComponent<NetworkView>().viewID;
+					NetworkView playerShootingView = networkView.GetComponents<NetworkView>()[1];
+					Debug.Log("NetworkView used to call the EnableShot RPC: " + playerShootingView.viewID);
+					playerShootingView.RPC ("EnableShot", RPCMode.AllBuffered, playerNumber.ToString(), shotID, playerShootingView.viewID);
 				}
 			}
 		}
@@ -94,7 +108,7 @@ public class PlayerController : MonoBehaviour {
 
 			float verticalMove = Input.GetAxis("Vertical");
 
-			#if UNITY_ANDROID
+			#if UNITY_ANDROID || UNITY_IPHONE
 			if(Input.touchCount > 0){
 				foreach(Touch touch in Input.touches){
 					if(touch.position.x < Screen.width/2){
@@ -144,7 +158,7 @@ public class PlayerController : MonoBehaviour {
 
 			float horizontalRotation = -Input.GetAxis("Horizontal");
 
-			#if UNITY_ANDROID
+			#if UNITY_ANDROID || UNITY_IPHONE
 			Vector3 accelerometer = Input.acceleration;
 
 			if(accelerometer.sqrMagnitude > 0.5f){
@@ -220,18 +234,5 @@ public class PlayerController : MonoBehaviour {
 			syncEndRotation = syncRotation;
 		}
 	}
-
-	[RPC]
-	void InstantiateShot(string playerID, NetworkViewID shotViewID){
-		GameObject shot = shotsPool.GetObjectByID(shotViewID);
-		if(shot != null){
-			Debug.Log("Enabled the shot with viewID = " + shot.networkView.viewID);
-			shot.transform.position = shotSpawn.position;
-			shot.transform.rotation = shotSpawn.rotation;
-			shot.name = ShotController.DefaultName + playerID;
-			shot.SetActive(true);
-		}
-	}
-
 }
 

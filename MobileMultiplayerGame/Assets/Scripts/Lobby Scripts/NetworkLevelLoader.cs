@@ -58,7 +58,7 @@ public class NetworkLevelLoader : MonoBehaviour {
 		// All network views loaded from a level will get a prefix into their NetworkViewID.
 		// This will prevent old updates from clients leaking into a newly created scene.
 		Network.SetLevelPrefix(levelPrefix);
-		Debug.Log("Loading a Network Level...");
+		//Debug.Log("Loading a Network Level...");
 		Application.LoadLevel(level);
 	}
 
@@ -66,14 +66,14 @@ public class NetworkLevelLoader : MonoBehaviour {
 	void OnLevelWasLoaded(int level) {
 		//Send the message only if it is not the main lobby
 		if(level != 0){
-			Debug.Log("Network Level loaded!");
+			//Debug.Log("Network Level loaded!");
 			
 			// Allow receiving data again
 			Network.isMessageQueueRunning = true;
 			// Now the level has been loaded and we can start sending out data to clients
 			Network.SetSendingEnabled(0, true);
 
-			Debug.Log("Sending message to other game objects...");
+			//Debug.Log("Sending message to other game objects...");
 
 			//Tell the other GameObjects that the level finished loading
 			foreach (GameObject go in FindObjectsOfType<GameObject>())

@@ -25,12 +25,12 @@ public class NetworkManager : MonoBehaviour {
 		NetworkConnectionError netError = Network.InitializeServer(Mathf.Abs(numberOfClients), gamePort, false);
 
 		if(netError == NetworkConnectionError.NoError){
-			Debug.Log("Server initialized in port: " + gamePort);
+			//Debug.Log("Server initialized in port: " + gamePort);
 			return;
 		}
 		else if(netError == NetworkConnectionError.CreateSocketOrThreadFailure){
 			gamePort++;
-			Debug.Log("Port already in use! Trying the port: " + gamePort);
+			//Debug.Log("Port already in use! Trying the port: " + gamePort);
 			StartServer();
 		}
 	}
@@ -62,7 +62,7 @@ public class NetworkManager : MonoBehaviour {
 	//Spawns the network player
 	private IEnumerator SpawnPlayer(){
 		yield return new WaitForEndOfFrame();
-		Debug.Log("Instantiating the player...");
+		//Debug.Log("Instantiating the player...");
 		GameObject instance = (GameObject) Network.Instantiate(playerPrefabs[Random.Range(0,playerPrefabs.Length)], Vector3.zero, Quaternion.identity, 0);
 		instance.GetComponent<PlayerController>().playerName = playerName;
 		Camera.main.GetComponent<CameraFollow>().followedObject = instance.transform;
@@ -72,13 +72,13 @@ public class NetworkManager : MonoBehaviour {
 #region Network Callbacks
 	//Called when a server is initialized
 	void OnServerInitialized(){
-		Debug.Log("Server initialized, now registering...");
+		//Debug.Log("Server initialized, now registering...");
 		playerName = uiManager.GetPlayerName();
 		MasterServer.RegisterHost(gameTypeName, uiManager.GetGameName(), "Network Game Room");
 	}
 
 	void OnPlayerDisconnected(NetworkPlayer netPlayer){
-		Debug.Log("Player disconnected from: " + netPlayer.ipAddress + ":" + netPlayer.port);
+		//Debug.Log("Player disconnected from: " + netPlayer.ipAddress + ":" + netPlayer.port);
 		score.networkView.RPC("ExcludePlayer",RPCMode.All, netPlayer);
 		Network.RemoveRPCs(netPlayer);
 		Network.DestroyPlayerObjects(netPlayer);
