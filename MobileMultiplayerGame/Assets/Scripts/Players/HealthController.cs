@@ -18,8 +18,7 @@ public class HealthController : MonoBehaviour {
 		healthIndicator.localScale = new Vector3(currentHealthPercent/100f, 1f, 1f);
 		isDead = false;
 	}
-
-	[RPC]
+	
 	public void ChangeHealth(int amount){
 		currentHealth += amount;
 

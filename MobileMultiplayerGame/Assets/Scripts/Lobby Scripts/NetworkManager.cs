@@ -12,6 +12,7 @@ public class NetworkManager : MonoBehaviour {
 	public int numberOfClients = 3;
 	public string gameTypeName = "SENAC Network Test Project";
 	public int gamePort = 25000;
+	public Vector2 spawnValues;
 
 	private HostData[] hostData;
 	private LobbyUIManager uiManager;
@@ -55,6 +56,12 @@ public class NetworkManager : MonoBehaviour {
 		DontDestroyOnLoad(this);
 	}
 
+	void OnLevelWasLoaded(int level) {
+		if(level == 0){
+			uiManager = GameObject.Find("UIManager").GetComponent<LobbyUIManager>();
+		}
+	}
+
 	void Start(){
 		uiManager = GameObject.Find("UIManager").GetComponent<LobbyUIManager>();
 	}
@@ -63,7 +70,8 @@ public class NetworkManager : MonoBehaviour {
 	private IEnumerator SpawnPlayer(){
 		yield return new WaitForEndOfFrame();
 		//Debug.Log("Instantiating the player...");
-		GameObject instance = (GameObject) Network.Instantiate(playerPrefabs[Random.Range(0,playerPrefabs.Length)], Vector3.zero, Quaternion.identity, 0);
+		Vector3 spawnPosition = new Vector3(Random.Range(-spawnValues.x,spawnValues.x), Random.Range(-spawnValues.y,spawnValues.y));
+		GameObject instance = (GameObject) Network.Instantiate(playerPrefabs[Random.Range(0,playerPrefabs.Length)], spawnPosition, Quaternion.identity, 0);
 		instance.GetComponent<PlayerController>().playerName = playerName;
 		Camera.main.GetComponent<CameraFollow>().followedObject = instance.transform;
 	}

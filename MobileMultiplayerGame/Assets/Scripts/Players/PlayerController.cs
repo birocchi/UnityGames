@@ -184,19 +184,19 @@ public class PlayerController : MonoBehaviour {
 
 	void OnCollisionEnter2D(Collision2D other){
 		if(other.gameObject.tag.Equals("Shot")){
-			string shipOwnerID = gameObject.networkView.viewID.ToString();
+			string shipOwnerID = playerNumber.ToString();
 			string shotOwnerID = other.gameObject.name.Substring(ShotController.DefaultName.Length);
 
 			Debug.Log(string.Format("Shot Collision! Ship Owner ID: {0}, Shot Owner ID: {1}",shipOwnerID,shotOwnerID));
 
-			if(shipOwnerID != shotOwnerID){
-				Debug.Log(string.Format("Damage applied to {0}!",gameObject.name));
+			if(networkView.isMine){
+				if(shipOwnerID != shotOwnerID){
+					Debug.Log(string.Format("Damage applied to {0}!",gameObject.name));
 
-				if(Network.isServer){
 					//Debug.Log(string.Format("Calling RPC -ChangeHealth- using {0}, Group: {1}, Owner: {2} ", networkView.viewID, networkView.group, networkView.owner));
 					//Debug.Log(string.Format("Calling RPC -ChangeHealth- through {0}, Group: {1}, Owner: {2} ", health.networkView.viewID, health.networkView.group, health.networkView.owner));
-					health.networkView.RPC("ChangeHealth",RPCMode.AllBuffered,-10);
-					score.networkView.RPC ("AddScore",RPCMode.AllBuffered, 1, int.Parse(shotOwnerID));
+					networkView.RPC("GetHurt",RPCMode.AllBuffered,-10);
+					networkView.RPC ("GetScore",score.GetNetworkPlayer(int.Parse(shotOwnerID)), 1, int.Parse(shotOwnerID));
 					if(health.isDead){
 						//Debug.Log("Removing all RPCs called by " + networkView.viewID + " in group " + networkView.group);
 						Network.RemoveRPCs(Network.player);
@@ -205,6 +205,16 @@ public class PlayerController : MonoBehaviour {
 				}
 			}
 		}
+	}
+
+	[RPC]
+	public void GetHurt(int amount){
+		health.ChangeHealth(amount);
+	}
+
+	[RPC]
+	public void GetScore(int value, int playerNumber ){
+		score.networkView.RPC("AddScore", RPCMode.AllBuffered, value, playerNumber);
 	}
 
 	void OnSerializeNetworkView(BitStream stream, NetworkMessageInfo info){

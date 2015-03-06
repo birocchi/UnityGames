@@ -30,6 +30,7 @@ public class NetworkLevelLoader : MonoBehaviour {
 				Application.Quit();
 			}
 			else {
+				Network.Disconnect();
 				Application.LoadLevel(disconnectedLevel);
 			}
 
