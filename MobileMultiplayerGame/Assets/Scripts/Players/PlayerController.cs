@@ -25,12 +25,6 @@ public class PlayerController : MonoBehaviour {
 	private Quaternion syncStartRotation = Quaternion.identity;
 	private Quaternion syncEndRotation = Quaternion.identity;
 	private float verticalMove = 0f;
-
-	#if UNITY_ANDROID || UNITY_IPHONE
-	//Mobile controller
-	private Vector2 initialTouchPosition;
-	private float touchDistanceTolerance = 10f;
-	#endif
 	
 	//Player info
 	private HealthController health;
@@ -38,6 +32,9 @@ public class PlayerController : MonoBehaviour {
 	public int playerNumber;
 	public NetworkPlayer netPlayer;
 	private ScoreManager score;
+
+	private AudioSource shotSound;
+	private AudioSource propulsorSound;
 
 	void Awake () {
 		lastSynchronizationTime = Time.time;
@@ -47,6 +44,8 @@ public class PlayerController : MonoBehaviour {
 		health = GetComponent<HealthController>();
 		shotsPool = GameObject.Find("ShotsPoolManager").GetComponent<ShotsPoolManager>();
 		score = GameObject.Find("GameManager").GetComponent<ScoreManager>();
+		shotSound = GetComponents<AudioSource>()[0];
+		propulsorSound = GetComponents<AudioSource>()[1];
 	}
 
 	void Start(){
@@ -61,12 +60,14 @@ public class PlayerController : MonoBehaviour {
 		}
 	}
 
+	//Receives the player number from the server
 	[RPC]
 	public void OnReceivePlayerNumberFromServer(int serverPlayerNumber){
 		playerNumber = serverPlayerNumber;
 		score.networkView.RPC("IncludePlayer", RPCMode.AllBuffered, playerName, networkView.owner, playerNumber);
 	}
 
+	//Enable a shot from the pool
 	[RPC]
 	void EnableShot(string playerID, NetworkViewID shotID, NetworkViewID ownerID){
 		GameObject shot = shotsPool.GetObjectByID(shotID);
@@ -76,7 +77,7 @@ public class PlayerController : MonoBehaviour {
 			shot.name = ShotController.DefaultName + playerID;
 			shot.GetComponent<ShotController>().OwnerID = ownerID;
 			shot.SetActive(true);
-			//Debug.Log("Enabled the shot with viewID = " + shotID);
+			shotSound.Play();
 		}
 	}
 
@@ -84,14 +85,7 @@ public class PlayerController : MonoBehaviour {
 		#if !UNITY_ANDROID && !UNITY_IPHONE
 		if(networkView.isMine){
 			if(Input.GetButton("Fire1")){
-				if(Time.time > nextFire){
-					nextFire = Time.time + fireRate;
-
-					NetworkViewID shotID = shotsPool.GetFreeObject().GetComponent<NetworkView>().viewID;
-					NetworkView playerShootingView = networkView.GetComponents<NetworkView>()[1];
-					//Debug.Log("NetworkView used to call the EnableShot RPC: " + playerShootingView.viewID);
-					playerShootingView.RPC ("EnableShot", RPCMode.AllBuffered, playerNumber.ToString(), shotID, playerShootingView.viewID);
-				}
+				Shoot();
 			}
 		}
 		#endif
@@ -102,11 +96,45 @@ public class PlayerController : MonoBehaviour {
 			playerShip.rotation = Quaternion.Lerp(syncStartRotation, syncEndRotation, syncTime / syncDelay);
 		}
 
-		if(verticalMove > 0)
+		//Animate the propulsor
+		if(verticalMove > 0){
 			propulsor.particleSystem.Play();
+			if(!propulsorSound.isPlaying){
+				propulsorSound.volume = 1f;
+				propulsorSound.Play();
+			}
+		}
 		else{
 			propulsor.particleSystem.Stop();
 			propulsor.particleSystem.Clear();
+			if(propulsorSound.isPlaying){
+				StartCoroutine(VolumeFade(propulsorSound,0f,0.1f));
+			} 
+		}
+	}
+
+	IEnumerator VolumeFade(AudioSource audioSource, float endVolume, float fadeLength){
+		
+		float startVolume = audioSource.volume;
+		float startTime = Time.time;
+		
+		while (Time.time < startTime + fadeLength){
+			audioSource.volume = startVolume + ((endVolume - startVolume) * ((Time.time - startTime) / fadeLength));
+			yield return null;
+		}
+		
+		if (endVolume == 0){
+			audioSource.Stop();
+		}
+	}
+	
+	void Shoot(){
+		if(Time.time > nextFire){
+			nextFire = Time.time + fireRate;
+			NetworkViewID shotID = shotsPool.GetFreeObject().GetComponent<NetworkView>().viewID;
+			NetworkView playerShootingView = networkView.GetComponents<NetworkView>()[1];
+			//Debug.Log("NetworkView used to call the EnableShot RPC: " + playerShootingView.viewID);
+			playerShootingView.RPC ("EnableShot", RPCMode.AllBuffered, playerNumber.ToString(), shotID, playerShootingView.viewID);
 		}
 	}
 
@@ -122,30 +150,18 @@ public class PlayerController : MonoBehaviour {
 					if(touch.position.x < Screen.width/2){
 						switch(touch.phase){
 						case TouchPhase.Began:
-							initialTouchPosition = touch.position;
-							break;
 						case TouchPhase.Moved:
 						case TouchPhase.Stationary:
-							if(touch.position.y - initialTouchPosition.y > touchDistanceTolerance ){
-								verticalMove = 1;
-							}
-							else if(touch.position.y - initialTouchPosition.y < -touchDistanceTolerance){
-								verticalMove = -1;
-							}
-							else{
-								verticalMove = 0;
-							}
+							verticalMove = 1;
+							break;
+						case TouchPhase.Ended:
+						case TouchPhase.Canceled:
+							verticalMove = 0;
 							break;
 						}
 					}
 					else{
-						if(Time.time > nextFire){
-							nextFire = Time.time + fireRate;
-							networkView.group = 2;
-							Debug.Log(string.Format("Calling RPC -InstantiateShot- using Group: {0}, Owner: {1} ", networkView.group, networkView.owner));
-							networkView.RPC ("InstantiateShot", RPCMode.AllBuffered, networkView.viewID.ToString(), shotsPool.GetFreeObject().networkView.viewID);
-							networkView.group = 0;
-						}
+						Shoot();
 					}
 				}
 			}
@@ -187,18 +203,11 @@ public class PlayerController : MonoBehaviour {
 			string shipOwnerID = playerNumber.ToString();
 			string shotOwnerID = other.gameObject.name.Substring(ShotController.DefaultName.Length);
 
-			Debug.Log(string.Format("Shot Collision! Ship Owner ID: {0}, Shot Owner ID: {1}",shipOwnerID,shotOwnerID));
-
 			if(networkView.isMine){
 				if(shipOwnerID != shotOwnerID){
-					Debug.Log(string.Format("Damage applied to {0}!",gameObject.name));
-
-					//Debug.Log(string.Format("Calling RPC -ChangeHealth- using {0}, Group: {1}, Owner: {2} ", networkView.viewID, networkView.group, networkView.owner));
-					//Debug.Log(string.Format("Calling RPC -ChangeHealth- through {0}, Group: {1}, Owner: {2} ", health.networkView.viewID, health.networkView.group, health.networkView.owner));
 					networkView.RPC("GetHurt",RPCMode.AllBuffered,-10);
 					networkView.RPC ("GetScore",score.GetNetworkPlayer(int.Parse(shotOwnerID)), 1, int.Parse(shotOwnerID));
 					if(health.isDead){
-						//Debug.Log("Removing all RPCs called by " + networkView.viewID + " in group " + networkView.group);
 						Network.RemoveRPCs(Network.player);
 						Network.Destroy(this.gameObject);
 					}
@@ -207,11 +216,13 @@ public class PlayerController : MonoBehaviour {
 		}
 	}
 
+	//Descrease health when hit by a shot
 	[RPC]
 	public void GetHurt(int amount){
 		health.ChangeHealth(amount);
 	}
 
+	//Gets the score from a successful fired shot
 	[RPC]
 	public void GetScore(int value, int playerNumber ){
 		score.networkView.RPC("AddScore", RPCMode.AllBuffered, value, playerNumber);
@@ -222,7 +233,7 @@ public class PlayerController : MonoBehaviour {
 		Quaternion syncRotation = Quaternion.identity;
 		float syncVerticalMove = 0;
 
-		//If is writing on the stream, sends the position;
+		//If is writing on the stream, sends the position, rotation and acceleration;
 		if(stream.isWriting){
 			syncPosition = transform.position;
 			syncRotation = playerShip.rotation;
@@ -231,7 +242,7 @@ public class PlayerController : MonoBehaviour {
 			stream.Serialize(ref syncRotation);
 			stream.Serialize(ref syncVerticalMove);
 		}
-		//If is reading the stream, set the variables used in interpolating the position
+		//If is reading the stream, set the variables used in interpolating the position, rotation and acceleration
 		else if(stream.isReading){
 			stream.Serialize(ref syncPosition);
 			stream.Serialize(ref syncRotation);
@@ -250,6 +261,7 @@ public class PlayerController : MonoBehaviour {
 			syncStartRotation = playerShip.rotation;
 			syncEndRotation = syncRotation;
 
+			//Set the acceleration
 			verticalMove = syncVerticalMove;
 		}
 	}
