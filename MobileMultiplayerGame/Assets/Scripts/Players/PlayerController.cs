@@ -7,6 +7,8 @@ public class PlayerController : MonoBehaviour {
 	public float acceleration;
 	public float maxSpeed;
 	public float turningSpeed;
+	public float respawnWaitTime;
+	public Vector2 spawnValues;
 	private Transform playerShip;
 	private Transform propulsor;
 	
@@ -15,6 +17,7 @@ public class PlayerController : MonoBehaviour {
 	private Transform shotSpawn;
 	private float nextFire;
 	private ShotsPoolManager shotsPool;
+	private NetworkView networkView2;
 
 	//Movement synchronization
 	private float lastSynchronizationTime;
@@ -33,8 +36,12 @@ public class PlayerController : MonoBehaviour {
 	public NetworkPlayer netPlayer;
 	private ScoreManager score;
 
+	//Sounds
 	private AudioSource shotSound;
 	private AudioSource propulsorSound;
+
+	//Effect
+	public GameObject playerExplosion;
 
 	void Awake () {
 		lastSynchronizationTime = Time.time;
@@ -43,6 +50,7 @@ public class PlayerController : MonoBehaviour {
 		shotSpawn = playerShip.FindChild("ShotSpawn");
 		health = GetComponent<HealthController>();
 		shotsPool = GameObject.Find("ShotsPoolManager").GetComponent<ShotsPoolManager>();
+		networkView2 = networkView.GetComponents<NetworkView>()[1];
 		score = GameObject.Find("GameManager").GetComponent<ScoreManager>();
 		shotSound = GetComponents<AudioSource>()[0];
 		propulsorSound = GetComponents<AudioSource>()[1];
@@ -83,7 +91,7 @@ public class PlayerController : MonoBehaviour {
 
 	void Update(){
 		#if !UNITY_ANDROID && !UNITY_IPHONE
-		if(networkView.isMine){
+		if(networkView.isMine && !health.isDead){
 			if(Input.GetButton("Fire1")){
 				Shoot();
 			}
@@ -112,35 +120,19 @@ public class PlayerController : MonoBehaviour {
 			} 
 		}
 	}
-
-	IEnumerator VolumeFade(AudioSource audioSource, float endVolume, float fadeLength){
-		
-		float startVolume = audioSource.volume;
-		float startTime = Time.time;
-		
-		while (Time.time < startTime + fadeLength){
-			audioSource.volume = startVolume + ((endVolume - startVolume) * ((Time.time - startTime) / fadeLength));
-			yield return null;
-		}
-		
-		if (endVolume == 0){
-			audioSource.Stop();
-		}
-	}
 	
 	void Shoot(){
 		if(Time.time > nextFire){
 			nextFire = Time.time + fireRate;
 			NetworkViewID shotID = shotsPool.GetFreeObject().GetComponent<NetworkView>().viewID;
-			NetworkView playerShootingView = networkView.GetComponents<NetworkView>()[1];
 			//Debug.Log("NetworkView used to call the EnableShot RPC: " + playerShootingView.viewID);
-			playerShootingView.RPC ("EnableShot", RPCMode.AllBuffered, playerNumber.ToString(), shotID, playerShootingView.viewID);
+			networkView2.RPC ("EnableShot", RPCMode.AllBuffered, playerNumber.ToString(), shotID, networkView2.viewID);
 		}
 	}
 
 	void FixedUpdate () {
 		//Do nothing if the player was not created by me
-		if(networkView.isMine){
+		if(networkView.isMine && !health.isDead){
 
 			verticalMove = Input.GetAxis("Vertical");
 
@@ -205,11 +197,10 @@ public class PlayerController : MonoBehaviour {
 
 			if(networkView.isMine){
 				if(shipOwnerID != shotOwnerID){
-					networkView.RPC("GetHurt",RPCMode.AllBuffered,-10);
-					networkView.RPC ("GetScore",score.GetNetworkPlayer(int.Parse(shotOwnerID)), 1, int.Parse(shotOwnerID));
+					networkView2.RPC("GetHurt",RPCMode.AllBuffered,-10);
+					networkView2.RPC ("GetScore",RPCMode.AllBuffered, 1, int.Parse(shotOwnerID));
 					if(health.isDead){
-						Network.RemoveRPCs(Network.player);
-						Network.Destroy(this.gameObject);
+						networkView2.RPC("Explode",RPCMode.AllBuffered);
 					}
 				}
 			}
@@ -222,10 +213,46 @@ public class PlayerController : MonoBehaviour {
 		health.ChangeHealth(amount);
 	}
 
+	//Explodes, take it off from the game, and start countdown to respawn
+	[RPC]
+	public void Explode(){
+		GameObject explosion = Instantiate(playerExplosion, transform.position, transform.rotation) as GameObject;
+		Destroy(explosion.gameObject, 3);
+
+		transform.FindChild("Ship").GetComponent<SpriteRenderer>().enabled = false;
+		transform.FindChild("HealthBar").GetComponent<Canvas>().enabled = false;
+		rigidbody2D.isKinematic = true;
+		collider2D.enabled = false;
+
+		if(networkView.isMine){
+			StartCoroutine(CountDownRespawn(respawnWaitTime, networkView.viewID));
+		}		
+	}
+
+	//Countdown to respawn the player in a random position
+	IEnumerator CountDownRespawn(float respawnWaitTime, NetworkViewID playerID){
+		yield return new WaitForSeconds(respawnWaitTime);
+		Network.RemoveRPCs(networkView2.viewID);
+		Vector3 spawnPosition = new Vector3(Random.Range(-spawnValues.x,spawnValues.x), Random.Range(-spawnValues.y,spawnValues.y));
+		networkView2.RPC("Respawn", RPCMode.All, spawnPosition, playerID);
+	}
+
+	//Respawn the player in a given position
+	[RPC]
+	public void Respawn(Vector3 position, NetworkViewID playerID){
+		GameObject player = NetworkView.Find(playerID).gameObject;
+		player.transform.position = position;
+		health.ChangeHealth(health.maxHealth);
+		transform.FindChild("Ship").GetComponent<SpriteRenderer>().enabled = true;
+		transform.FindChild("HealthBar").GetComponent<Canvas>().enabled = true;
+		rigidbody2D.isKinematic = false;
+		collider2D.enabled = true;
+	}
+
 	//Gets the score from a successful fired shot
 	[RPC]
 	public void GetScore(int value, int playerNumber ){
-		score.networkView.RPC("AddScore", RPCMode.AllBuffered, value, playerNumber);
+		score.AddScore(value, playerNumber);
 	}
 
 	void OnSerializeNetworkView(BitStream stream, NetworkMessageInfo info){
@@ -263,6 +290,22 @@ public class PlayerController : MonoBehaviour {
 
 			//Set the acceleration
 			verticalMove = syncVerticalMove;
+		}
+	}
+
+	//Fade the volume to avoid the glitchy audio.stop
+	IEnumerator VolumeFade(AudioSource audioSource, float endVolume, float fadeLength){
+		
+		float startVolume = audioSource.volume;
+		float startTime = Time.time;
+		
+		while (Time.time < startTime + fadeLength){
+			audioSource.volume = startVolume + ((endVolume - startVolume) * ((Time.time - startTime) / fadeLength));
+			yield return null;
+		}
+		
+		if (endVolume == 0){
+			audioSource.Stop();
 		}
 	}
 }

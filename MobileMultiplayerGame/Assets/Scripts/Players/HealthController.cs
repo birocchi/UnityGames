@@ -25,9 +25,13 @@ public class HealthController : MonoBehaviour {
 		if(currentHealth > maxHealth){
 			currentHealth = maxHealth;
 		}
-		else if (currentHealth <= 0){
+
+		if (currentHealth <= 0){
 			currentHealth = 0;
 			isDead = true;
+		}
+		else{
+			isDead = false;
 		}
 
 		currentHealthPercent = (currentHealth * 100)/maxHealth;
