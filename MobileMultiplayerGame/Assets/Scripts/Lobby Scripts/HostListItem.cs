@@ -8,6 +8,7 @@ public class HostListItem : MonoBehaviour {
 	public HostData hostData;
 
 	public void JoinGame(){
+		GameObject.Find("NetworkLevelLoader").GetComponent<AudioSource>().Play();
 		GameObject.Find("NetworkManager").GetComponent<NetworkManager>().ConnectToHost(hostData);
 	}
 

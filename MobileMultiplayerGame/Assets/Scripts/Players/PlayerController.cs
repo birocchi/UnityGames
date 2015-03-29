@@ -43,6 +43,14 @@ public class PlayerController : MonoBehaviour {
 	//Effect
 	public GameObject playerExplosion;
 
+	//Mobile
+	private float debounce = 0.05f;
+	private bool supportsGyro;
+	private Gyroscope gyro;
+	private Quaternion initialOrientation;
+	private float validationTime;
+	private float rotationZ;
+
 	void Awake () {
 		lastSynchronizationTime = Time.time;
 		playerShip = transform.FindChild("Ship");
@@ -54,6 +62,7 @@ public class PlayerController : MonoBehaviour {
 		score = GameObject.Find("GameManager").GetComponent<ScoreManager>();
 		shotSound = GetComponents<AudioSource>()[0];
 		propulsorSound = GetComponents<AudioSource>()[1];
+		supportsGyro = SystemInfo.supportsGyroscope;
 	}
 
 	void Start(){
@@ -64,6 +73,13 @@ public class PlayerController : MonoBehaviour {
 			}
 			else {
 				score.networkView.RPC("IncludeNewPlayerOnServer",RPCMode.Server, playerName, networkView.viewID);
+			}
+
+			if(supportsGyro){
+				gyro = Input.gyro;
+				gyro.enabled = true;
+				gyro.updateInterval = 1f/60f;
+				initialOrientation = gyro.attitude;
 			}
 		}
 	}
@@ -184,6 +200,24 @@ public class PlayerController : MonoBehaviour {
 				}
 			}
 			#endif
+			if (supportsGyro){
+				Vector3 rotation = gyro.rotationRateUnbiased;
+				
+				float time = Time.timeSinceLevelLoad;
+				float period = time - validationTime;
+				validationTime = time;
+				
+				if(rotation.magnitude > debounce){
+					rotation = ((rotation * period) * 180)/Mathf.PI;
+				}
+				else{
+					rotation = Vector3.zero;
+				}
+
+				rotationZ =  Mathf.Abs(rotation.z) > 3 * debounce ? ((rotation.z * period) * 180)/Mathf.PI : 0;
+
+				transform.Rotate(0, 0, rotationZ);
+			}
 
 			playerShip.Rotate(0, 0, horizontalRotation * turningSpeed);
 		}
