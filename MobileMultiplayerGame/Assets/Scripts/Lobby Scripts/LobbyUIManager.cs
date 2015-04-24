@@ -34,7 +34,7 @@ public class LobbyUIManager : MonoBehaviour {
 
 	//Shows the list of available hosts
 	public void ShowHostList(string gameTypeName){
-		audio.Play();
+		GetComponent<AudioSource>().Play();
 
 		//Shows the host list panel
 		hostListPanel.GetComponent<Image>().enabled = true;

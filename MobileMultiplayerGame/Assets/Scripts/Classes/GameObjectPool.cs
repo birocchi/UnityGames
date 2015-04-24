@@ -27,7 +27,7 @@ public class GameObjectPool {
 
 	public GameObject GetObjectByID(NetworkViewID ID){
 		foreach(GameObject obj in pool){
-			if(obj.networkView.viewID == ID){
+			if(obj.GetComponent<NetworkView>().viewID == ID){
 				return obj;
 			}
 		}

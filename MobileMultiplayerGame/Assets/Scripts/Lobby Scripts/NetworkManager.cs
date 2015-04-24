@@ -79,7 +79,7 @@ public class NetworkManager : MonoBehaviour {
 	}
 
 	void OnPlayerDisconnected(NetworkPlayer netPlayer){
-		score.networkView.RPC("ExcludePlayer",RPCMode.All, netPlayer);
+		score.GetComponent<NetworkView>().RPC("ExcludePlayer",RPCMode.All, netPlayer);
 		Network.RemoveRPCs(netPlayer);
 		Network.DestroyPlayerObjects(netPlayer);
 	}

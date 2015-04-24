@@ -58,7 +58,7 @@ public class PlayerController : MonoBehaviour {
 		shotSpawn = playerShip.FindChild("ShotSpawn");
 		health = GetComponent<HealthController>();
 		shotsPool = GameObject.Find("ShotsPoolManager").GetComponent<ShotsPoolManager>();
-		networkView2 = networkView.GetComponents<NetworkView>()[1];
+		networkView2 = GetComponent<NetworkView>().GetComponents<NetworkView>()[1];
 		score = GameObject.Find("GameManager").GetComponent<ScoreManager>();
 		shotSound = GetComponents<AudioSource>()[0];
 		propulsorSound = GetComponents<AudioSource>()[1];
@@ -66,13 +66,13 @@ public class PlayerController : MonoBehaviour {
 	}
 
 	void Start(){
-		if(networkView.isMine){
+		if(GetComponent<NetworkView>().isMine){
 			if(Network.isServer){
-				playerNumber = score.IncludeServerPlayer(playerName, networkView.owner);
-				score.networkView.RPC("IncludePlayer", RPCMode.AllBuffered, playerName, networkView.owner, playerNumber);
+				playerNumber = score.IncludeServerPlayer(playerName, GetComponent<NetworkView>().owner);
+				score.GetComponent<NetworkView>().RPC("IncludePlayer", RPCMode.AllBuffered, playerName, GetComponent<NetworkView>().owner, playerNumber);
 			}
 			else {
-				score.networkView.RPC("IncludeNewPlayerOnServer",RPCMode.Server, playerName, networkView.viewID);
+				score.GetComponent<NetworkView>().RPC("IncludeNewPlayerOnServer",RPCMode.Server, playerName, GetComponent<NetworkView>().viewID);
 			}
 
 			if(supportsGyro){
@@ -88,7 +88,7 @@ public class PlayerController : MonoBehaviour {
 	[RPC]
 	public void OnReceivePlayerNumberFromServer(int serverPlayerNumber){
 		playerNumber = serverPlayerNumber;
-		score.networkView.RPC("IncludePlayer", RPCMode.AllBuffered, playerName, networkView.owner, playerNumber);
+		score.GetComponent<NetworkView>().RPC("IncludePlayer", RPCMode.AllBuffered, playerName, GetComponent<NetworkView>().owner, playerNumber);
 	}
 
 	//Enable a shot from the pool
@@ -107,14 +107,14 @@ public class PlayerController : MonoBehaviour {
 
 	void Update(){
 		#if !UNITY_ANDROID && !UNITY_IPHONE
-		if(networkView.isMine && !health.isDead){
+		if(GetComponent<NetworkView>().isMine && !health.isDead){
 			if(Input.GetButton("Fire1")){
 				Shoot();
 			}
 		}
 		#endif
 		//Update the position of the other players
-		if(!networkView.isMine){
+		if(!GetComponent<NetworkView>().isMine){
 			syncTime += Time.deltaTime;
 			transform.position = Vector3.Lerp(syncStartPosition, syncEndPosition, syncTime / syncDelay);
 			playerShip.rotation = Quaternion.Lerp(syncStartRotation, syncEndRotation, syncTime / syncDelay);
@@ -122,15 +122,15 @@ public class PlayerController : MonoBehaviour {
 
 		//Animate the propulsor
 		if(verticalMove > 0){
-			propulsor.particleSystem.Play();
+			propulsor.GetComponent<ParticleSystem>().Play();
 			if(!propulsorSound.isPlaying){
 				propulsorSound.volume = 1f;
 				propulsorSound.Play();
 			}
 		}
 		else{
-			propulsor.particleSystem.Stop();
-			propulsor.particleSystem.Clear();
+			propulsor.GetComponent<ParticleSystem>().Stop();
+			propulsor.GetComponent<ParticleSystem>().Clear();
 			if(propulsorSound.isPlaying){
 				StartCoroutine(VolumeFade(propulsorSound,0f,0.1f));
 			} 
@@ -148,7 +148,7 @@ public class PlayerController : MonoBehaviour {
 
 	void FixedUpdate () {
 		//Do nothing if the player was not created by me
-		if(networkView.isMine && !health.isDead){
+		if(GetComponent<NetworkView>().isMine && !health.isDead){
 
 			verticalMove = Input.GetAxis("Vertical");
 
@@ -176,11 +176,11 @@ public class PlayerController : MonoBehaviour {
 			#endif
 
 			if(verticalMove > 0){
-				rigidbody2D.AddForce(playerShip.up * verticalMove * acceleration);
+				GetComponent<Rigidbody2D>().AddForce(playerShip.up * verticalMove * acceleration);
 			}
 
-			if(rigidbody2D.velocity.magnitude > maxSpeed){
-				rigidbody2D.velocity = rigidbody2D.velocity.normalized * maxSpeed;
+			if(GetComponent<Rigidbody2D>().velocity.magnitude > maxSpeed){
+				GetComponent<Rigidbody2D>().velocity = GetComponent<Rigidbody2D>().velocity.normalized * maxSpeed;
 			}
 
 			float horizontalRotation = -Input.GetAxis("Horizontal");
@@ -229,7 +229,7 @@ public class PlayerController : MonoBehaviour {
 			string shipOwnerID = playerNumber.ToString();
 			string shotOwnerID = other.gameObject.name.Substring(ShotController.DefaultName.Length);
 
-			if(networkView.isMine){
+			if(GetComponent<NetworkView>().isMine){
 				if(shipOwnerID != shotOwnerID){
 					networkView2.RPC("GetHurt",RPCMode.AllBuffered,-10);
 					networkView2.RPC ("GetScore",RPCMode.AllBuffered, 1, int.Parse(shotOwnerID));
@@ -255,11 +255,11 @@ public class PlayerController : MonoBehaviour {
 
 		transform.FindChild("Ship").GetComponent<SpriteRenderer>().enabled = false;
 		transform.FindChild("HealthBar").GetComponent<Canvas>().enabled = false;
-		rigidbody2D.isKinematic = true;
-		collider2D.enabled = false;
+		GetComponent<Rigidbody2D>().isKinematic = true;
+		GetComponent<Collider2D>().enabled = false;
 
-		if(networkView.isMine){
-			StartCoroutine(CountDownRespawn(respawnWaitTime, networkView.viewID));
+		if(GetComponent<NetworkView>().isMine){
+			StartCoroutine(CountDownRespawn(respawnWaitTime, GetComponent<NetworkView>().viewID));
 		}		
 	}
 
@@ -279,8 +279,8 @@ public class PlayerController : MonoBehaviour {
 		health.ChangeHealth(health.maxHealth);
 		transform.FindChild("Ship").GetComponent<SpriteRenderer>().enabled = true;
 		transform.FindChild("HealthBar").GetComponent<Canvas>().enabled = true;
-		rigidbody2D.isKinematic = false;
-		collider2D.enabled = true;
+		GetComponent<Rigidbody2D>().isKinematic = false;
+		GetComponent<Collider2D>().enabled = true;
 	}
 
 	//Gets the score from a successful fired shot

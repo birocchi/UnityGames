@@ -8,10 +8,10 @@ public class ReflectAsteroids : MonoBehaviour {
 	void OnCollisionEnter2D(Collision2D other) {
 		if (other.gameObject.tag == "Asteroid"){
 			if(other.relativeVelocity.magnitude < maxReflectionVelocity){
-				other.gameObject.rigidbody2D.velocity = other.relativeVelocity;
+				other.gameObject.GetComponent<Rigidbody2D>().velocity = other.relativeVelocity;
 			}
 			else{
-				other.gameObject.rigidbody2D.velocity = other.relativeVelocity.normalized * maxReflectionVelocity;
+				other.gameObject.GetComponent<Rigidbody2D>().velocity = other.relativeVelocity.normalized * maxReflectionVelocity;
 			}
 
 		}

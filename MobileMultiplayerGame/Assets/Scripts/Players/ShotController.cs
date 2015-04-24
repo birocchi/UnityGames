@@ -15,7 +15,7 @@ public class ShotController : MonoBehaviour {
 	}
 
 	void OnEnable(){
-		rigidbody2D.velocity = transform.up * speed;
+		GetComponent<Rigidbody2D>().velocity = transform.up * speed;
 		StartCoroutine(DestroyObject(lifeTime));
 		Debug.Log("Shot " + gameObject.name + " enabled! Lifetime: " + lifeTime + "s");
 	}
@@ -27,7 +27,7 @@ public class ShotController : MonoBehaviour {
 	IEnumerator DestroyObject(float time){
 		yield return new WaitForSeconds(time);
 		if(Network.isServer){
-			networkView.RPC ("DisableShot", RPCMode.All);
+			GetComponent<NetworkView>().RPC ("DisableShot", RPCMode.All);
 			Network.RemoveRPCs(OwnerID);
 		}
 		Debug.Log(string.Format("Server removed the RPCs from the owner {0}", OwnerID));
@@ -37,6 +37,6 @@ public class ShotController : MonoBehaviour {
 	public void DisableShot(){
 		gameObject.SetActive(false);
 		gameObject.name = DefaultName;
-		Debug.Log(string.Format("Disabled the shot with viewID = {0}", networkView.viewID));
+		Debug.Log(string.Format("Disabled the shot with viewID = {0}", GetComponent<NetworkView>().viewID));
 	}
 }

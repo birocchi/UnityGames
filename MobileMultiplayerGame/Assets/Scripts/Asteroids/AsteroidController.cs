@@ -15,7 +15,7 @@ public class AsteroidController : MonoBehaviour {
 	}
 
 	void Update(){
-		if(!networkView.isMine){
+		if(!GetComponent<NetworkView>().isMine){
 			syncTime += Time.deltaTime;
 			transform.position = Vector3.Lerp(syncStartPosition, syncEndPosition, syncTime / syncDelay);
 		}

@@ -21,7 +21,7 @@ public class NetworkLevelLoader : MonoBehaviour {
 
 		// Network level loading is done in a separate channel.
 		DontDestroyOnLoad(this);
-		networkView.group = 1;
+		GetComponent<NetworkView>().group = 1;
 	}
 
 	void Update(){
@@ -40,7 +40,7 @@ public class NetworkLevelLoader : MonoBehaviour {
 	void OnServerInitialized(){
 		Network.RemoveRPCsInGroup(0);
 		Network.RemoveRPCsInGroup(1);
-		networkView.RPC( "LoadLevel", RPCMode.AllBuffered, supportedNetworkLevels[0], lastLevelPrefix + 1);
+		GetComponent<NetworkView>().RPC( "LoadLevel", RPCMode.AllBuffered, supportedNetworkLevels[0], lastLevelPrefix + 1);
 	}
 
 	//RPC that tells everyone to load the specified level
