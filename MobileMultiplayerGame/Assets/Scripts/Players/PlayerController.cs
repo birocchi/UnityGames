@@ -220,6 +220,9 @@ public class PlayerController : MonoBehaviour {
 			}
 
 			playerShip.Rotate(0, 0, horizontalRotation * turningSpeed);
+			//transform.RotateAround(playerShip.position + playerShip.right * -horizontalRotation * 5, Vector3.forward, horizontalRotation * turningSpeed);
+			GetComponent<Rigidbody2D>().AddForce(playerShip.right * -horizontalRotation * 5);
+			Debug.DrawLine(playerShip.position,playerShip.position + playerShip.right * -horizontalRotation * 5);
 		}
 
 	}
